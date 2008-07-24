@@ -5,6 +5,8 @@ vrack_SOURCES = \
 	gui.c gui.h \
 	vnc.c vnc.h \
 	switch.c switch.h \
+	misc.c misc.h \
+	cmdq.c cmdq.h \
 	tempdir.c tempdir.h
 
 vrack_CFLAGS = \
