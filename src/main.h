@@ -13,6 +13,8 @@ typedef struct {
 	GdkPixbuf *backbuffer;
 	VncDisplay *vnc;
 	guint8 button_mask;
-} VRack;
+	GSList *switches;
+	gchar *tmpdir;
+} VRackCtxt;
 
 #endif

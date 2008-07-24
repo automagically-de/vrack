@@ -3,6 +3,6 @@
 
 #include "main.h"
 
-gboolean vnc_init(VRack *rack);
+gboolean vnc_init(VRackCtxt *ctxt);
 
 #endif

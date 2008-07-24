@@ -3,7 +3,7 @@
 
 #include "main.h"
 
-gboolean gui_init(VRack *rack);
-gboolean gui_run(VRack *rack);
+gboolean gui_init(VRackCtxt *ctxt);
+gboolean gui_run(VRackCtxt *ctxt);
 
 #endif

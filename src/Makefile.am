@@ -3,7 +3,9 @@ bin_PROGRAMS = vrack
 vrack_SOURCES = \
 	main.c main.h \
 	gui.c gui.h \
-	vnc.c vnc.h
+	vnc.c vnc.h \
+	switch.c switch.h \
+	tempdir.c tempdir.h
 
 vrack_CFLAGS = \
 	-I$(top_srcdir) -I$(top_builddir) \
