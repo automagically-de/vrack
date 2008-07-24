@@ -1,0 +1,36 @@
+AC_INIT(configure.in)
+
+VERSION=0.0.1
+PACKAGE=vrack
+
+AM_CONFIG_HEADER(config.h)
+
+AM_INIT_AUTOMAKE($PACKAGE, $VERSION, no-define)
+AC_SUBST(VERSION)
+
+AM_PATH_GLIB_2_0(2.4.0,,AC_MSG_ERROR([GLib >= 2.4.0 is required]))
+AM_PATH_GTK_2_0(2.4.0,,AC_MSG_ERROR([GTK+ >= 2.4.0 is required]))
+
+PKG_CHECK_MODULES(GTKVNC, gtk-vnc-1.0 >= 0.3.0,,
+	AC_MSG_ERROR([gtk-vnc >= 0.3.0 is required]))
+
+AC_MSG_CHECKING([for debug level])
+AC_ARG_ENABLE(debug,
+	[[  --enable-debug[=LVL]    enable debug level LVL or 1 (default is 0)]],
+	[if test "$enableval" = "yes" ; then DEBUG=1; else DEBUG=$enableval; fi],
+	DEBUG=0)
+AC_MSG_RESULT($DEBUG)
+AC_SUBST(DEBUG)
+
+if test "$DEBUG" = "0"; then
+	DBG_CFLAGS="-O2"
+else
+	DBG_CFLAGS="-g"
+fi
+AC_SUBST(DBG_CFLAGS)
+
+AC_OUTPUT(Makefile
+	m4/Makefile
+	src/Makefile
+)
+
