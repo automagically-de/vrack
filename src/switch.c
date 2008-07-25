@@ -10,6 +10,7 @@
 #include <sys/types.h>
 
 #include "main.h"
+#include "rack.h"
 #include "switch.h"
 #include "tempdir.h"
 #include "misc.h"
@@ -19,12 +20,16 @@
 #define MGMTSOCK "mgmt.sock"
 
 struct _VRackSwitch {
+	VRackItem *rackitem;
+
 	guint32 n_ports;
 	gchar *tmpdir;
 	GIOChannel *mgmt;
 	CmdQ *qmgmt;
+	GtkWidget *widget;
 };
 
+static GtkWidget *switch_create_widget(VRackSwitch *sw);
 static void switch_cleanup(VRackSwitch *sw);
 static gboolean switch_mgmt_prompt_cb(const gchar *text, gpointer user_data);
 #if 0
@@ -105,6 +110,10 @@ VRackSwitch *switch_new(VRackCtxt *ctxt, guint32 n_ports)
 	sw->qmgmt = cmdq_create(sw->mgmt, switch_mgmt_prompt_cb, sw);
 
 	cmdq_add(sw->qmgmt, "", NULL); /* flush greeting */
+
+	sw->widget = switch_create_widget(sw);
+	sw->rackitem = rack_item_new(sw->widget, 1);
+
 	return sw;
 }
 
@@ -135,9 +144,21 @@ void switch_shutdown(VRackSwitch *sw)
 	switch_cleanup(sw);
 }
 
+/****************************************************************************/
+
+static GtkWidget *switch_create_widget(VRackSwitch *sw)
+{
+	GtkWidget *widget;
+
+	widget = gtk_frame_new("switch");
+	return widget;
+}
+
 static void switch_cleanup(VRackSwitch *sw)
 {
 	int fd;
+
+	rack_item_free(sw->rackitem);
 
 	if(sw->mgmt) {
 		fd = g_io_channel_unix_get_fd(sw->mgmt);

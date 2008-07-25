@@ -20,7 +20,7 @@ gboolean vnc_init(VRackCtxt *ctxt)
 	g_debug("pointer is %sabsolute",
 		vnc_display_is_pointer_absolute(ctxt->vnc) ? "" : "not ");
 
-	if(!vnc_display_open_host(ctxt->vnc, "localhost", "5901")) {
+	if(!vnc_display_open_host(ctxt->vnc, "localhost", "5910")) {
 		g_warning("vnc: failed to open localhost:5901");
 		return FALSE;
 	} else {

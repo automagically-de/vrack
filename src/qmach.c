@@ -12,6 +12,7 @@
 #include <sys/types.h>
 
 #include "main.h"
+#include "rack.h"
 #include "qmach.h"
 #include "tempdir.h"
 #include "misc.h"
@@ -22,13 +23,17 @@
 #define SER0SOCK "serial0.sock"
 
 struct _VRackQMach {
+	VRackItem *rackitem;
+
 	gchar *description;
 	gchar *tmpdir;
 	GIOChannel *mon;
 	GIOChannel *ser0;
 	CmdQ *qmon;
+	GtkWidget *widget;
 };
 
+static GtkWidget *qmach_create_widget(VRackQMach *qm);
 static void qmach_cleanup(VRackQMach *qm);
 static gboolean qmach_mon_prompt_cb(const gchar *text, gpointer user_data);
 #if 0
@@ -44,6 +49,7 @@ VRackQMach *qmach_new(VRackCtxt *ctxt, const gchar *description)
 	GError *error = NULL;
 
 	qm = g_new0(VRackQMach, 1);
+
 	qm->description = g_strdup(description);
 	name = g_strdup_printf("qmach.0x%04x", g_random_int_range(0, 1024*64));
 	qm->tmpdir = tempdir_create(ctxt->tmpdir, name);
@@ -112,6 +118,9 @@ VRackQMach *qmach_new(VRackCtxt *ctxt, const gchar *description)
 
 	qm->qmon = cmdq_create(qm->mon, qmach_mon_prompt_cb, qm);
 
+	qm->widget = qmach_create_widget(qm);
+	qm->rackitem = rack_item_new(qm->widget, 2);
+
 	cmdq_add(qm->qmon, "", NULL);
 	return qm;
 }
@@ -141,9 +150,21 @@ void qmach_shutdown(VRackQMach *qm)
 	qmach_cleanup(qm);
 }
 
+/*****************************************************************************/
+
+static GtkWidget *qmach_create_widget(VRackQMach *qm)
+{
+	GtkWidget *widget;
+
+	widget = gtk_frame_new("QMach");
+	return widget;
+}
+
 static void qmach_cleanup(VRackQMach *qm)
 {
 	int fd;
+
+	rack_item_free(qm->rackitem);
 
 	if(qm->mon) {
 		fd = g_io_channel_unix_get_fd(qm->mon);

@@ -192,9 +192,14 @@ static void gui_vnc_auth_fail_cb(GtkWidget *vnc, const gchar *msg,
 
 gboolean gui_init(VRackCtxt *ctxt)
 {
-	GtkWidget *vbox;
-
 	gtk_init(ctxt->argcp, ctxt->argvp);
+
+	return TRUE;
+}
+
+gboolean gui_create(VRackCtxt *ctxt, GtkWidget *rackwidget)
+{
+	GtkWidget *vbox;
 
 	ctxt->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(ctxt->window), "VRack");
@@ -219,6 +224,7 @@ gboolean gui_init(VRackCtxt *ctxt)
 	gtk_widget_realize(GTK_WIDGET(ctxt->vnc));
 
 	ctxt->da = gtk_drawing_area_new();
+	gtk_widget_set_size_request(ctxt->da, 320, 240);
 	gtk_widget_add_events(ctxt->da,
 		GDK_POINTER_MOTION_MASK |
 		GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK);
@@ -234,7 +240,9 @@ gboolean gui_init(VRackCtxt *ctxt)
 
 	gtk_box_pack_start(GTK_BOX(vbox), GTK_WIDGET(ctxt->da), TRUE, TRUE, 0);
 
-#if 0
+	gtk_box_pack_start(GTK_BOX(vbox), rackwidget, TRUE, TRUE, 5);
+
+#if 1
 	g_idle_add(gui_idle_cb, ctxt);
 #endif
 	return TRUE;

@@ -5,6 +5,7 @@
 #include <vncdisplay.h>
 
 #include "main.h"
+#include "rack.h"
 #include "gui.h"
 #include "vnc.h"
 #include "switch.h"
@@ -18,6 +19,7 @@ int main(int argc, char *argv[])
 	GOptionContext *context;
 	GError *error = NULL;
 	VRackCtxt *ctxt;
+	VRack *rack;
 	VRackSwitch *sw;
 	VRackQMach *qm;
 	gchar *name;
@@ -41,15 +43,26 @@ int main(int argc, char *argv[])
 	}
 
 	gui_init(ctxt);
-	vnc_init(ctxt);
+
+	rack = rack_new(ctxt, 42);
+	if(rack == NULL) /* should never fail... */
+		return EXIT_FAILURE;
+
+	gui_create(ctxt, rack_get_widget(rack));
 
 	sw = switch_new(ctxt, 16);
-	if(sw)
+	if(sw) {
 		ctxt->switches = g_slist_append(ctxt->switches, sw);
+		rack_attach(rack, sw, rack_find_space(rack, 1));
+	}
 
 	qm = qmach_new(ctxt, "");
-	if(qm)
+	if(qm) {
 		ctxt->machines = g_slist_append(ctxt->machines, qm);
+		rack_attach(rack, qm, 10);
+	}
+
+	vnc_init(ctxt);
 
 	gui_run(ctxt);
 

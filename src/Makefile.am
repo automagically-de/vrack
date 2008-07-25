@@ -4,6 +4,7 @@ vrack_SOURCES = \
 	main.c main.h \
 	gui.c gui.h \
 	vnc.c vnc.h \
+	rack.c rack.h \
 	switch.c switch.h \
 	qmach.c qmach.h \
 	misc.c misc.h \
