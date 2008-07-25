@@ -23,6 +23,7 @@ struct _VRackSwitch {
 	VRackItem *rackitem;
 
 	guint32 n_ports;
+	gchar *command;
 	gchar *tmpdir;
 	GIOChannel *mgmt;
 	CmdQ *qmgmt;
@@ -40,7 +41,7 @@ static void switch_mgmt_help_cb(GIOChannel *io, const gchar *text,
 VRackSwitch *switch_new(VRackCtxt *ctxt, guint32 n_ports)
 {
 	VRackSwitch *sw;
-	gchar *s_stdout = NULL, *s_stderr = NULL, *cmd, *name;
+	gchar *s_stdout = NULL, *s_stderr = NULL, *name;
 	gint status;
 	GError *error = NULL;
 
@@ -48,7 +49,7 @@ VRackSwitch *switch_new(VRackCtxt *ctxt, guint32 n_ports)
 	sw->n_ports = n_ports;
 	sw->tmpdir = tempdir_create(ctxt->tmpdir, "switch.0");
 
-	cmd = g_strdup_printf("vde_switch "
+	sw->command = g_strdup_printf("vde_switch "
 		"--daemon "
 		"--pidfile %s%c" PIDFILENAME " "
 		"--numports %d "
@@ -58,10 +59,11 @@ VRackSwitch *switch_new(VRackCtxt *ctxt, guint32 n_ports)
 		sw->n_ports,
 		sw->tmpdir,
 		sw->tmpdir, G_DIR_SEPARATOR);
-	g_debug("starting switch: %s", cmd);
+	g_debug("starting switch: %s", sw->command);
 
 	/* starting vde process */
-	if(g_spawn_command_line_sync(cmd, &s_stdout, &s_stderr, &status, &error)) {
+	if(g_spawn_command_line_sync(sw->command, &s_stdout, &s_stderr, &status,
+		&error)) {
 		g_strstrip(s_stdout);
 		g_strstrip(s_stderr);
 #if 0
@@ -151,6 +153,7 @@ static GtkWidget *switch_create_widget(VRackSwitch *sw)
 	GtkWidget *widget;
 
 	widget = gtk_frame_new("switch");
+	gtk_widget_set_tooltip_text(widget, sw->command);
 	return widget;
 }
 

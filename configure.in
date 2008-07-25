@@ -11,7 +11,7 @@ AC_SUBST(VERSION)
 AM_PROG_CC_C_O
 
 AM_PATH_GLIB_2_0(2.6.0,,AC_MSG_ERROR([GLib >= 2.6.0 is required]))
-AM_PATH_GTK_2_0(2.4.0,,AC_MSG_ERROR([GTK+ >= 2.4.0 is required]))
+AM_PATH_GTK_2_0(2.12.0,,AC_MSG_ERROR([GTK+ >= 2.12.0 is required]))
 
 PKG_CHECK_MODULES(GTKVNC, gtk-vnc-1.0 >= 0.3.0,,
 	AC_MSG_ERROR([gtk-vnc >= 0.3.0 is required]))

@@ -45,7 +45,8 @@ VRackDisplay *display_new(VRackCtxt *ctxt)
 	/* FIXME: evil hack */
 	ctxt->vnc = dpy->vnc;
 	dpy->rackitem = rack_item_new(dpy->widget, 8);
-	g_idle_add(display_update_cb, dpy);
+
+	g_timeout_add(100, display_update_cb, dpy);
 
 	return dpy;
 }
@@ -155,8 +156,6 @@ static gboolean display_update_cb(gpointer data)
 		GDK_RGB_DITHER_NORMAL,
 		pixels, rowstride,
 		0, 0);
-
-	g_usleep(10000);
 
 	return TRUE;
 }

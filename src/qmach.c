@@ -26,6 +26,7 @@ struct _VRackQMach {
 	VRackItem *rackitem;
 
 	gchar *description;
+	gchar *command;
 	gchar *tmpdir;
 	GIOChannel *mon;
 	GIOChannel *ser0;
@@ -44,7 +45,7 @@ static void qmach_mon_help_cb(GIOChannel *io, const gchar *text,
 VRackQMach *qmach_new(VRackCtxt *ctxt, const gchar *description)
 {
 	VRackQMach *qm;
-	gchar *name, *cmd, *s_stdout = NULL, *s_stderr = NULL;
+	gchar *name, *s_stdout = NULL, *s_stderr = NULL;
 	gint status = 0;
 	GError *error = NULL;
 
@@ -55,7 +56,7 @@ VRackQMach *qmach_new(VRackCtxt *ctxt, const gchar *description)
 	qm->tmpdir = tempdir_create(ctxt->tmpdir, name);
 	g_free(name);
 
-	cmd = g_strdup_printf("qemu "
+	qm->command = g_strdup_printf("qemu "
 		"-daemonize "
 		"-pidfile %s%c" PIDFILE " "
 		"-monitor unix:%s%c" MONSOCK ",server,nowait "
@@ -68,10 +69,11 @@ VRackQMach *qmach_new(VRackCtxt *ctxt, const gchar *description)
 		10,
 		qm->tmpdir, G_DIR_SEPARATOR,
 		"/media/disc2/ISOs/dsl-n-01RC4.iso");
-	g_debug("qmach: starting qemu: %s", cmd);
+	g_debug("qmach: starting qemu: %s", qm->command);
 
 	/* starting qemu process */
-	if(g_spawn_command_line_sync(cmd, &s_stdout, &s_stderr, &status, &error)) {
+	if(g_spawn_command_line_sync(qm->command, &s_stdout, &s_stderr, &status,
+		&error)) {
 		g_strstrip(s_stdout);
 		g_strstrip(s_stderr);
 #if 0
@@ -157,6 +159,7 @@ static GtkWidget *qmach_create_widget(VRackQMach *qm)
 	GtkWidget *widget;
 
 	widget = gtk_frame_new("QMach");
+	gtk_widget_set_tooltip_text(widget, qm->command);
 	return widget;
 }
 
