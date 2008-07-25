@@ -154,7 +154,7 @@ static gboolean switch_mgmt_prompt_cb(const gchar *text, gpointer user_data)
 {
 	gboolean retval;
 
-	retval = (strstr(text, "vde$") != NULL);
+	retval = (strcmp(text + (strlen(text) - 5), "vde$ ") == 0);
 	return retval;
 }
 

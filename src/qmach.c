@@ -6,6 +6,8 @@
 #include <errno.h>
 #include <signal.h>
 
+#include <glib/gstdio.h>
+
 #include <unistd.h>
 #include <sys/types.h>
 
@@ -29,6 +31,10 @@ struct _VRackQMach {
 
 static void qmach_cleanup(VRackQMach *qm);
 static gboolean qmach_mon_prompt_cb(const gchar *text, gpointer user_data);
+#if 0
+static void qmach_mon_help_cb(GIOChannel *io, const gchar *text,
+	gpointer user_data);
+#endif
 
 VRackQMach *qmach_new(VRackCtxt *ctxt, const gchar *description)
 {
@@ -62,9 +68,10 @@ VRackQMach *qmach_new(VRackCtxt *ctxt, const gchar *description)
 	if(g_spawn_command_line_sync(cmd, &s_stdout, &s_stderr, &status, &error)) {
 		g_strstrip(s_stdout);
 		g_strstrip(s_stderr);
+#if 0
 		g_debug("qmach: stdout:\n%s\nswitch stderr:\n%s\n",
 			s_stdout, s_stderr);
-
+#endif
 		if(s_stdout)
 			g_free(s_stdout);
 		if(s_stderr)
@@ -111,27 +118,26 @@ VRackQMach *qmach_new(VRackCtxt *ctxt, const gchar *description)
 
 void qmach_shutdown(VRackQMach *qm)
 {
-	gint i;
-	gchar *pidfile;
+	gchar *name;
 
 	if(qm == NULL)
 		return;
 
-	pidfile = g_strdup_printf("%s%c" PIDFILE, qm->tmpdir, G_DIR_SEPARATOR);
 	cmdq_add(qm->qmon, "quit", NULL);
+	/* remove sockets/pidfile */
+	name = g_strdup_printf("%s%c" PIDFILE, qm->tmpdir, G_DIR_SEPARATOR);
+	g_unlink(name);
+	g_free(name);
+	name = g_strdup_printf("%s%c" MONSOCK, qm->tmpdir, G_DIR_SEPARATOR);
+	g_unlink(name);
+	g_free(name);
+	name = g_strdup_printf("%s%c" SER0SOCK, qm->tmpdir, G_DIR_SEPARATOR);
+	g_unlink(name);
+	g_free(name);
 
-	/* wait for termination */
-	for(i = 0; i < 2000; i ++) {
-		if(!g_file_test(pidfile, G_FILE_TEST_IS_REGULAR)) {
-			tempdir_remove(qm->tmpdir);
-			break;
-		}
-		g_usleep(1000);
-	}
-	if(g_file_test(pidfile, G_FILE_TEST_IS_REGULAR))
-		g_debug("qmach: failed to terminate process");
+	tempdir_remove(qm->tmpdir);
 
-	g_free(pidfile);
+	/* clean up */
 	qmach_cleanup(qm);
 }
 
@@ -157,9 +163,14 @@ static gboolean qmach_mon_prompt_cb(const gchar *text, gpointer user_data)
 {
 	gboolean retval;
 
-	g_debug("qmach prompt: %s", text + (strlen(text) - 7));
-
-	retval = (strstr(text, "(qemu)") != NULL);
+	retval = (strcmp(text + (strlen(text) - 7), "(qemu) ") == 0);
 	return retval;
 }
 
+#if 0
+static void qmach_mon_help_cb(GIOChannel *io, const gchar *text,
+	gpointer user_data)
+{
+	g_debug("qmach_mon_help_cb: %s", text);
+}
+#endif
