@@ -89,8 +89,7 @@ VRackSwitch *switch_new(VRackCtxt *ctxt, guint32 n_ports)
 	/* open management socket */
 	name = g_strdup_printf("%s%c" MGMTSOCK, sw->tmpdir, G_DIR_SEPARATOR);
 	if(!misc_wait_for_file(name, 2000)) {
-		g_warning("switch: could not find management socket '%s'",
-			name);
+		g_warning("switch: could not find management socket '%s'", name);
 		g_free(name);
 		switch_cleanup(sw);
 		return NULL;
@@ -99,15 +98,6 @@ VRackSwitch *switch_new(VRackCtxt *ctxt, guint32 n_ports)
 	sw->mgmt = misc_connect_to_socket(name);
 	g_free(name);
 	if(sw->mgmt == NULL) {
-		switch_cleanup(sw);
-		return NULL;
-	}
-	error = NULL;
-	g_io_channel_set_flags(sw->mgmt, G_IO_FLAG_NONBLOCK, &error);
-	if(error != NULL) {
-		g_warning("switch: failed to set mgmt socket to non-blocking mode: %s",
-			error->message);
-		g_error_free(error);
 		switch_cleanup(sw);
 		return NULL;
 	}
@@ -121,7 +111,6 @@ VRackSwitch *switch_new(VRackCtxt *ctxt, guint32 n_ports)
 void switch_shutdown(VRackSwitch *sw)
 {
 	gint i;
-	GPid pid = -1;
 	gchar *pidfile;
 
 	if(sw == NULL)
@@ -140,7 +129,7 @@ void switch_shutdown(VRackSwitch *sw)
 		g_usleep(1000);
 	}
 	if(g_file_test(pidfile, G_FILE_TEST_IS_REGULAR))
-		g_debug("switch: failed to terminate process %d", pid);
+		g_debug("switch: failed to terminate process");
 
 	g_free(pidfile);
 	switch_cleanup(sw);
@@ -157,6 +146,7 @@ static void switch_cleanup(VRackSwitch *sw)
 	}
 	if(sw->tmpdir)
 		g_free(sw->tmpdir);
+	cmdq_destroy(sw->qmgmt);
 	g_free(sw);
 }
 

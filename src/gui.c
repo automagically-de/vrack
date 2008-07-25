@@ -234,8 +234,9 @@ gboolean gui_init(VRackCtxt *ctxt)
 
 	gtk_box_pack_start(GTK_BOX(vbox), GTK_WIDGET(ctxt->da), TRUE, TRUE, 0);
 
+#if 0
 	g_idle_add(gui_idle_cb, ctxt);
-
+#endif
 	return TRUE;
 }
 

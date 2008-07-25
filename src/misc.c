@@ -27,8 +27,10 @@ gboolean misc_wait_for_file(const gchar *path, guint32 msec)
 
 GIOChannel *misc_connect_to_socket(const gchar *path)
 {
+	GIOChannel *io;
 	struct sockaddr_un sun;
 	int fd, ret;
+	GError *error = NULL;
 
 	sun.sun_family = PF_UNIX;
 	g_snprintf(sun.sun_path, sizeof(sun.sun_path), "%s", path);
@@ -46,6 +48,18 @@ GIOChannel *misc_connect_to_socket(const gchar *path)
 		close(fd);
 		return NULL;
 	}
-	return g_io_channel_unix_new(fd);
+	io = g_io_channel_unix_new(fd);
+
+	/* set non-blocking */
+	g_io_channel_set_flags(io, G_IO_FLAG_NONBLOCK, &error);
+	if(error != NULL) {
+		g_warning("io: failed to set socket to non-blocking mode: %s",
+			error->message);
+		g_error_free(error);
+		g_io_channel_unref(io);
+		/* FIXME: close fd */
+		return NULL;
+	}
+	return io;
 }
 

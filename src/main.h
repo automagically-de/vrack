@@ -14,6 +14,7 @@ typedef struct {
 	VncDisplay *vnc;
 	guint8 button_mask;
 	GSList *switches;
+	GSList *machines;
 	gchar *tmpdir;
 } VRackCtxt;
 

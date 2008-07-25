@@ -8,6 +8,7 @@
 #include "gui.h"
 #include "vnc.h"
 #include "switch.h"
+#include "qmach.h"
 #include "tempdir.h"
 
 static void main_cleanup(VRackCtxt *ctxt);
@@ -18,6 +19,7 @@ int main(int argc, char *argv[])
 	GError *error = NULL;
 	VRackCtxt *ctxt;
 	VRackSwitch *sw;
+	VRackQMach *qm;
 	gchar *name;
 
 	ctxt = g_new0(VRackCtxt, 1);
@@ -42,7 +44,12 @@ int main(int argc, char *argv[])
 	vnc_init(ctxt);
 
 	sw = switch_new(ctxt, 16);
-	ctxt->switches = g_slist_append(ctxt->switches, sw);
+	if(sw)
+		ctxt->switches = g_slist_append(ctxt->switches, sw);
+
+	qm = qmach_new(ctxt, "");
+	if(qm)
+		ctxt->machines = g_slist_append(ctxt->machines, qm);
 
 	gui_run(ctxt);
 
@@ -55,11 +62,19 @@ static void main_cleanup(VRackCtxt *ctxt)
 {
 	GSList *item;
 
+	/* remove machines */
+	item = ctxt->machines;
+	while(item) {
+		qmach_shutdown((VRackQMach *)item->data);
+		item = g_slist_remove(item, item->data);
+	}
+	/* remove switches */
 	item = ctxt->switches;
 	while(item) {
 		switch_shutdown((VRackSwitch *)item->data);
 		item = g_slist_remove(item, item->data);
 	}
+	/* clean up */
 	tempdir_remove(ctxt->tmpdir);
 	g_free(ctxt->tmpdir);
 	g_free(ctxt);
