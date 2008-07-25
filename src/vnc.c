@@ -10,10 +10,10 @@ gboolean vnc_init(VRackCtxt *ctxt)
 	vnc_display_set_read_only(            ctxt->vnc, FALSE);
 	vnc_display_set_pointer_local(        ctxt->vnc, FALSE);
 	vnc_display_set_lossy_encoding(       ctxt->vnc, FALSE);
-	vnc_display_set_keyboard_grab(        ctxt->vnc, TRUE);
-	vnc_display_set_pointer_grab(         ctxt->vnc, TRUE);
-	vnc_display_set_shared_flag(          ctxt->vnc, TRUE);
-	vnc_display_force_grab(               ctxt->vnc, TRUE);
+	vnc_display_set_keyboard_grab(        ctxt->vnc, FALSE);
+	vnc_display_set_pointer_grab(         ctxt->vnc, FALSE);
+	vnc_display_set_shared_flag(          ctxt->vnc, FALSE);
+	vnc_display_force_grab(               ctxt->vnc, FALSE);
 
 	vnc_display_send_keys(ctxt->vnc, keyvals, 1);
 

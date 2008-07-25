@@ -8,6 +8,7 @@
 #include "rack.h"
 #include "gui.h"
 #include "vnc.h"
+#include "display.h"
 #include "switch.h"
 #include "qmach.h"
 #include "tempdir.h"
@@ -20,6 +21,7 @@ int main(int argc, char *argv[])
 	GError *error = NULL;
 	VRackCtxt *ctxt;
 	VRack *rack;
+	VRackDisplay *dpy;
 	VRackSwitch *sw;
 	VRackQMach *qm;
 	gchar *name;
@@ -44,11 +46,16 @@ int main(int argc, char *argv[])
 
 	gui_init(ctxt);
 
-	rack = rack_new(ctxt, 42);
+	rack = rack_new(ctxt, 20);
 	if(rack == NULL) /* should never fail... */
 		return EXIT_FAILURE;
 
 	gui_create(ctxt, rack_get_widget(rack));
+
+	dpy = display_new(ctxt);
+	if(dpy) {
+		rack_attach(rack, dpy, 1);
+	}
 
 	sw = switch_new(ctxt, 16);
 	if(sw) {

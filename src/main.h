@@ -9,10 +9,7 @@ typedef struct {
 	char ***argvp;
 
 	GtkWidget *window;
-	GtkWidget *da;
-	GdkPixbuf *backbuffer;
 	VncDisplay *vnc;
-	guint8 button_mask;
 	GSList *switches;
 	GSList *machines;
 	gchar *tmpdir;
