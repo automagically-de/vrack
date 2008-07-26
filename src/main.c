@@ -6,6 +6,7 @@
 
 #include "main.h"
 #include "rack.h"
+#include "kvm.h"
 #include "gui.h"
 #include "vnc.h"
 #include "display.h"
@@ -21,6 +22,7 @@ int main(int argc, char *argv[])
 	GError *error = NULL;
 	VRackCtxt *ctxt;
 	VRack *rack;
+	VRackKvmSwitch *kvm;
 	VRackDisplay *dpy;
 	VRackSwitch *sw;
 	VRackQMach *qm;
@@ -53,9 +55,14 @@ int main(int argc, char *argv[])
 
 	gui_create(ctxt, rack_get_widget(rack));
 
+	kvm = kvm_switch_new(ctxt, 6);
+	if(kvm) {
+		rack_attach(rack, kvm, 1);
+	}
+
 	dpy = display_new(ctxt);
 	if(dpy) {
-		rack_attach(rack, dpy, 1);
+		rack_attach(rack, dpy, 2);
 	}
 
 	sw = switch_new(ctxt, 16);
@@ -68,8 +75,10 @@ int main(int argc, char *argv[])
 	if(qm) {
 		ctxt->machines = g_slist_append(ctxt->machines, qm);
 		rack_attach(rack, qm, 10);
-		display_set_kvm_source(dpy, qmach_get_kvm_source(qm));
+		kvm_switch_attach(kvm, qmach_get_kvm_source(qm), -1);
 	}
+
+	display_set_kvm_source(dpy, kvm_switch_get_kvm_source(kvm));
 
 	gui_run(ctxt);
 

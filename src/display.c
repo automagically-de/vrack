@@ -184,7 +184,8 @@ static gboolean display_da_motion_cb(GtkWidget *widget, GdkEventMotion *em,
 
 	if(dpy->source->get_size(dpy->source->opaque, &srcw, &srch)) {
 		display_get_scaled_pos(dpy, srcw, srch, em->x, em->y, &lx, &ly);
-		dpy->source->send_mouse_move(dpy->source->opaque, lx, ly);
+		if(dpy->source->send_mouse_move)
+			dpy->source->send_mouse_move(dpy->source->opaque, lx, ly);
 	}
 
 	g_debug("display: mouse move to %d, %d", lx, ly);
@@ -202,7 +203,8 @@ static gboolean display_da_button_press_cb(GtkWidget *widget,
 		return TRUE;
 
 	dpy->button_mask |= (1 << (eb->button - 1));
-	dpy->source->send_mouse_button(dpy->source->opaque, dpy->button_mask);
+	if(dpy->source->send_mouse_button)
+		dpy->source->send_mouse_button(dpy->source->opaque, dpy->button_mask);
 
 	g_debug("display: mouse buttons: %04x", dpy->button_mask);
 

@@ -11,8 +11,8 @@ typedef struct _VRackKvmSink VRackKvmSink;
 
 VRackKvmSwitch *kvm_switch_new(VRackCtxt *ctxt, guint32 n_ports);
 void kvm_switch_shutdown(VRackKvmSwitch *kvm);
-VRackKvmSink *kvm_switch_attach(VRackKvmSwitch *kvm, VRackKvmSource *source,
-	guint32 port);
+gboolean kvm_switch_attach(VRackKvmSwitch *kvm, VRackKvmSource *src,
+	gint32 port);
 VRackKvmSource *kvm_switch_get_kvm_source(VRackKvmSwitch *kvm);
 
 typedef GdkPixbuf *(* VRackKvmGetPixbufFunc)(gpointer opaque);
@@ -29,12 +29,6 @@ struct _VRackKvmSource {
 	VRackKvmGetSizeFunc get_size;
 	VRackKvmSendMouseMoveFunc send_mouse_move;
 	VRackKvmSendMouseButtonFunc send_mouse_button;
-	gpointer opaque;
-};
-
-
-struct _VRackKvmSink {
-	VRackKvmSource *source;
 	gpointer opaque;
 };
 
