@@ -1,6 +1,7 @@
 #include <gtk/gtk.h>
 
 #include "main.h"
+#include "vnc.h"
 
 gboolean gui_init(VRackCtxt *ctxt)
 {
@@ -20,6 +21,9 @@ gboolean gui_create(VRackCtxt *ctxt, GtkWidget *rackwidget)
 
 	vbox = gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(ctxt->window), vbox);
+
+	gtk_box_pack_start(GTK_BOX(vbox), vnc_create_widget(ctxt),
+		FALSE, FALSE, 0);
 
 	gtk_box_pack_start(GTK_BOX(vbox), rackwidget, TRUE, TRUE, 5);
 

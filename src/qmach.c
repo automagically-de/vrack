@@ -12,7 +12,9 @@
 #include <sys/types.h>
 
 #include "main.h"
+#include "vnc.h"
 #include "rack.h"
+#include "kvm.h"
 #include "qmach.h"
 #include "tempdir.h"
 #include "misc.h"
@@ -24,6 +26,13 @@
 
 struct _VRackQMach {
 	VRackItem *rackitem;
+
+	VRackCtxt *ctxt;
+	VRackKvmSource *kvm_source;
+
+	guint32 vnc_token;
+	gchar *vnc_host;
+	guint32 vnc_port;
 
 	gchar *description;
 	gchar *command;
@@ -42,6 +51,15 @@ static void qmach_mon_help_cb(GIOChannel *io, const gchar *text,
 	gpointer user_data);
 #endif
 
+static GdkPixbuf *qmach_kvm_get_pixbuf_cb(gpointer opaque);
+static gboolean qmach_kvm_get_size_cb(gpointer opaque, guint32 *w, guint32 *h);
+static gboolean qmach_kvm_send_mouse_move_cb(gpointer opaque,
+	guint32 x, guint32 y);
+static gboolean qmach_kvm_send_mouse_button_cb(gpointer opaque,
+	guint32 button_mask);
+
+/*****************************************************************************/
+
 VRackQMach *qmach_new(VRackCtxt *ctxt, const gchar *description)
 {
 	VRackQMach *qm;
@@ -50,6 +68,17 @@ VRackQMach *qmach_new(VRackCtxt *ctxt, const gchar *description)
 	GError *error = NULL;
 
 	qm = g_new0(VRackQMach, 1);
+	qm->ctxt = ctxt;
+
+	qm->kvm_source = g_new(VRackKvmSource, 1);
+	qm->kvm_source->opaque = qm;
+	qm->kvm_source->get_pixbuf = qmach_kvm_get_pixbuf_cb;
+	qm->kvm_source->get_size = qmach_kvm_get_size_cb;
+	qm->kvm_source->send_mouse_move = qmach_kvm_send_mouse_move_cb;
+	qm->kvm_source->send_mouse_button = qmach_kvm_send_mouse_button_cb;
+
+	qm->vnc_host = g_strdup("localhost");
+	qm->vnc_port = 10;
 
 	qm->description = g_strdup(description);
 	name = g_strdup_printf("qmach.0x%04x", g_random_int_range(0, 1024*64));
@@ -60,16 +89,18 @@ VRackQMach *qmach_new(VRackCtxt *ctxt, const gchar *description)
 		"-daemonize "
 		"-pidfile %s%c" PIDFILE " "
 		"-monitor unix:%s%c" MONSOCK ",server,nowait "
-		"-vnc localhost:%u "
+		"-vnc %s:%u "
 		/* arch specific */
 		"-serial unix:%s%c" SER0SOCK ",server,nowait "
 		"-cdrom %s -boot d",
 		qm->tmpdir, G_DIR_SEPARATOR,
 		qm->tmpdir, G_DIR_SEPARATOR,
-		10,
+		qm->vnc_host, qm->vnc_port,
 		qm->tmpdir, G_DIR_SEPARATOR,
 		"/media/disc2/ISOs/dsl-n-01RC4.iso");
 	g_debug("qmach: starting qemu: %s", qm->command);
+
+	qm->vnc_token = g_str_hash(qm->command);
 
 	/* starting qemu process */
 	if(g_spawn_command_line_sync(qm->command, &s_stdout, &s_stderr, &status,
@@ -152,6 +183,11 @@ void qmach_shutdown(VRackQMach *qm)
 	qmach_cleanup(qm);
 }
 
+VRackKvmSource *qmach_get_kvm_source(VRackQMach *qm)
+{
+	return qm->kvm_source;
+}
+
 /*****************************************************************************/
 
 static GtkWidget *qmach_create_widget(VRackQMach *qm)
@@ -198,3 +234,45 @@ static void qmach_mon_help_cb(GIOChannel *io, const gchar *text,
 	g_debug("qmach_mon_help_cb: %s", text);
 }
 #endif
+
+/*****************************************************************************/
+/* KVM interface                                                             */
+
+static GdkPixbuf *qmach_kvm_get_pixbuf_cb(gpointer opaque)
+{
+	VRackQMach *qm = opaque;
+	VRackKvmSource *vncsrc;
+
+	vncsrc = vnc_get_source(qm->ctxt, qm->vnc_token, qm->vnc_host,
+		5900 + qm->vnc_port);
+	if(vncsrc)
+		return vncsrc->get_pixbuf(vncsrc->opaque);
+	return NULL;
+}
+
+static gboolean qmach_kvm_get_size_cb(gpointer opaque, guint32 *w, guint32 *h)
+{
+	VRackQMach *qm = opaque;
+	VRackKvmSource *vncsrc;
+
+	vncsrc = vnc_get_source(qm->ctxt, qm->vnc_token, qm->vnc_host,
+		5900 + qm->vnc_port);
+	if(vncsrc)
+		return vncsrc->get_size(vncsrc->opaque, w, h);
+	return FALSE;
+}
+
+static gboolean qmach_kvm_send_mouse_move_cb(gpointer opaque,
+	guint32 x, guint32 y)
+{
+	/* TODO */
+	return FALSE;
+}
+
+static gboolean qmach_kvm_send_mouse_button_cb(gpointer opaque,
+	guint32 button_mask)
+{
+	/* TODO */
+	return FALSE;
+}
+

@@ -4,22 +4,25 @@
 #include "main.h"
 #include "rack.h"
 #include "display.h"
+#include "kvm.h"
 
 struct _VRackDisplay {
 	VRackItem *rackitem;
 
+	VRackKvmSource *source;
 	GtkWidget *widget;
 	GtkWidget *da;
 	GdkPixbuf *backbuffer;
-	VncDisplay *vnc;
 	guint32 button_mask;
 };
 
 static GtkWidget *display_create_widget(VRackDisplay *dpy);
-static void display_get_scaled_pos(VRackDisplay *dpy, gdouble x, gdouble y,
-	gint *lx, gint *ly);
+static void display_get_scaled_pos(VRackDisplay *dpy,
+	guint32 source_width, guint32 source_height,
+	gdouble x, gdouble y, gint *lx, gint *ly);
 
 static gboolean display_update_cb(gpointer data);
+
 static void display_da_resized_cb(GtkWidget *widget, GdkEventConfigure *ec,
 	gpointer data);
 static gboolean display_da_motion_cb(GtkWidget *widget, GdkEventMotion *em,
@@ -28,12 +31,6 @@ static gboolean display_da_button_press_cb(GtkWidget *widget,
 	GdkEventButton *eb, gpointer data);
 static gboolean display_da_button_release_cb(GtkWidget *widget,
 	GdkEventButton *eb,	gpointer data);
-static void display_vnc_credential_cb(GtkWidget *vnc, GValueArray *credList);
-static void display_vnc_initialized_cb(GtkWidget *vnc, GtkWindow *window,
-	gpointer data);
-static void display_vnc_connected_cb(GtkWidget *vnc, gpointer data);
-static void display_vnc_auth_fail_cb(GtkWidget *vnc, const gchar *msg,
-	gpointer data);
 
 VRackDisplay *display_new(VRackCtxt *ctxt)
 {
@@ -42,8 +39,6 @@ VRackDisplay *display_new(VRackCtxt *ctxt)
 	dpy = g_new0(VRackDisplay, 1);
 
 	dpy->widget = display_create_widget(dpy);
-	/* FIXME: evil hack */
-	ctxt->vnc = dpy->vnc;
 	dpy->rackitem = rack_item_new(dpy->widget, 8);
 
 	g_timeout_add(100, display_update_cb, dpy);
@@ -54,6 +49,12 @@ VRackDisplay *display_new(VRackCtxt *ctxt)
 void display_shutdown(VRackDisplay *dpy)
 {
 	g_free(dpy);
+}
+
+gboolean display_set_kvm_source(VRackDisplay *dpy, VRackKvmSource *source)
+{
+	dpy->source = source;
+	return TRUE;
 }
 
 /*****************************************************************************/
@@ -67,18 +68,6 @@ static GtkWidget *display_create_widget(VRackDisplay *dpy)
 	vbox = gtk_vbox_new(FALSE, 0);
 	gtk_container_set_border_width(GTK_CONTAINER(vbox), 5);
 	gtk_container_add(GTK_CONTAINER(widget), vbox);
-
-	/* real vnc widget */
-	dpy->vnc = VNC_DISPLAY(vnc_display_new());
-	g_signal_connect(G_OBJECT(dpy->vnc), "vnc-auth-credential",
-		G_CALLBACK(display_vnc_credential_cb), dpy);
-	g_signal_connect(G_OBJECT(dpy->vnc), "vnc-connected",
-		G_CALLBACK(display_vnc_connected_cb), dpy);
-	g_signal_connect(G_OBJECT(dpy->vnc), "vnc-initialized",
-		G_CALLBACK(display_vnc_initialized_cb), dpy);
-	g_signal_connect(G_OBJECT(dpy->vnc), "vnc-auth-failure",
-		G_CALLBACK(display_vnc_auth_fail_cb), dpy);
-	gtk_box_pack_start(GTK_BOX(vbox), GTK_WIDGET(dpy->vnc), TRUE, TRUE, 0);
 
 	/* drawing area for scaled output */
 	dpy->da = gtk_drawing_area_new();
@@ -99,14 +88,15 @@ static GtkWidget *display_create_widget(VRackDisplay *dpy)
 	return widget;
 }
 
-static void display_get_scaled_pos(VRackDisplay *dpy, gdouble x, gdouble y,
-	gint *lx, gint *ly)
+static void display_get_scaled_pos(VRackDisplay *dpy,
+	guint32 source_width, guint32 source_height,
+	gdouble x, gdouble y, gint *lx, gint *ly)
 {
 	gdouble scale_x, scale_y;
 
-	scale_x = (gdouble)vnc_display_get_width(dpy->vnc) /
+	scale_x = (gdouble)source_width /
 		(gdouble)dpy->da->allocation.width;
-	scale_y = (gdouble)vnc_display_get_height(dpy->vnc) /
+	scale_y = (gdouble)source_height /
 		(gdouble)dpy->da->allocation.height;
 
 	*lx = (gint)(x * scale_x);
@@ -125,8 +115,10 @@ static gboolean display_update_cb(gpointer data)
 	gdouble scale_x, scale_y;
 
 	g_return_val_if_fail(dpy != NULL, FALSE);
+	if(dpy->source == NULL)
+		return TRUE;
 
-	pixbuf = vnc_display_get_pixbuf(dpy->vnc);
+	pixbuf = dpy->source->get_pixbuf(dpy->source->opaque);
 	if(pixbuf == NULL)
 		return TRUE;
 
@@ -183,13 +175,19 @@ static gboolean display_da_motion_cb(GtkWidget *widget, GdkEventMotion *em,
 	gpointer data)
 {
 	VRackDisplay *dpy = (VRackDisplay *)data;
-	gint lx, ly;
+	gint lx = 0, ly = 0;
+	guint32 srcw, srch;
 
 	g_return_val_if_fail(dpy != NULL, FALSE);
+	if(dpy->source == NULL)
+		return TRUE;
 
-	display_get_scaled_pos(dpy, em->x, em->y, &lx, &ly);
+	if(dpy->source->get_size(dpy->source->opaque, &srcw, &srch)) {
+		display_get_scaled_pos(dpy, srcw, srch, em->x, em->y, &lx, &ly);
+		dpy->source->send_mouse_move(dpy->source->opaque, lx, ly);
+	}
 
-	vnc_display_send_pointer(dpy->vnc, lx, ly, dpy->button_mask);
+	g_debug("display: mouse move to %d, %d", lx, ly);
 
 	return TRUE;
 }
@@ -198,94 +196,33 @@ static gboolean display_da_button_press_cb(GtkWidget *widget,
 	GdkEventButton *eb, gpointer data)
 {
 	VRackDisplay *dpy = (VRackDisplay *)data;
-	gint lx, ly;
 
 	g_return_val_if_fail(dpy != NULL, FALSE);
+	if(dpy->source == NULL)
+		return TRUE;
 
 	dpy->button_mask |= (1 << (eb->button - 1));
+	dpy->source->send_mouse_button(dpy->source->opaque, dpy->button_mask);
 
-	display_get_scaled_pos(dpy, eb->x, eb->y, &lx, &ly);
-
-	g_debug("mouse: press  : %dx%d, %04x", lx, ly, dpy->button_mask);
-
-	vnc_display_send_pointer(dpy->vnc, lx, ly, dpy->button_mask);
+	g_debug("display: mouse buttons: %04x", dpy->button_mask);
 
 	return TRUE;
 }
-
 
 static gboolean display_da_button_release_cb(GtkWidget *widget,
 	GdkEventButton *eb,	gpointer data)
 {
 	VRackDisplay *dpy = (VRackDisplay *)data;
-	gint lx, ly;
 
 	g_return_val_if_fail(dpy != NULL, FALSE);
+	if(dpy->source == NULL)
+		return TRUE;
 
 	dpy->button_mask &= ~(1 << (eb->button - 1));
+	dpy->source->send_mouse_button(dpy->source->opaque, dpy->button_mask);
 
-	display_get_scaled_pos(dpy, eb->x, eb->y, &lx, &ly);
-
-	g_debug("mouse: release: %dx%d, %04x", lx, ly, dpy->button_mask);
-
-	vnc_display_send_pointer(dpy->vnc, lx, ly, dpy->button_mask);
+	g_debug("display: mouse release: %04x", dpy->button_mask);
 
 	return TRUE;
 }
-
-static void display_vnc_credential_cb(GtkWidget *vnc, GValueArray *credList)
-{
-	const gchar **data;
-	GValue *cred;
-	gint i;
-
-	g_debug("got request for %d credential(s)", credList->n_values);
-
-	data = g_new0(const gchar *, credList->n_values);
-
-	for(i = 0; i < credList->n_values ; i++) {
-		cred = g_value_array_get_nth(credList, i);
-		switch(g_value_get_enum(cred)) {
-			case VNC_DISPLAY_CREDENTIAL_USERNAME:
-			case VNC_DISPLAY_CREDENTIAL_PASSWORD:
-				g_debug("got username/password request");
-				break;
-			case VNC_DISPLAY_CREDENTIAL_CLIENTNAME:
-				g_debug("clientname request");
-				data[i] = "vrack";
-				if(vnc_display_set_credential(VNC_DISPLAY(vnc),
-					g_value_get_enum(cred), data[i]) != 0) {
-					g_warning("failed to set credential type %d",
-						g_value_get_enum(cred));
-					vnc_display_close(VNC_DISPLAY(vnc));
-				}
-				break;
-			default:
-				g_debug("unsupported credential type %d",
-					g_value_get_enum(cred));
-				break;
-		}
-	}
-	g_free(data);
-}
-
-static void display_vnc_initialized_cb(GtkWidget *vnc, GtkWindow *window,
-	gpointer data)
-{
-	g_debug("initialized");
-}
-
-static void display_vnc_connected_cb(GtkWidget *vnc, gpointer data)
-{
-	g_debug("vnc: connected to %s (open: %u)",
-		vnc_display_get_name(VNC_DISPLAY(vnc)),
-		vnc_display_is_open(VNC_DISPLAY(vnc)));
-}
-
-static void display_vnc_auth_fail_cb(GtkWidget *vnc, const gchar *msg,
-	gpointer data)
-{
-	g_debug("auth failed: %s", msg ? msg : "");
-}
-
 

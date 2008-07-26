@@ -9,7 +9,10 @@ typedef struct {
 	char ***argvp;
 
 	GtkWidget *window;
+
 	VncDisplay *vnc;
+	gpointer vnc_priv;
+
 	GSList *switches;
 	GSList *machines;
 	gchar *tmpdir;

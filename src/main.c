@@ -45,6 +45,7 @@ int main(int argc, char *argv[])
 	}
 
 	gui_init(ctxt);
+	vnc_init(ctxt);
 
 	rack = rack_new(ctxt, 20);
 	if(rack == NULL) /* should never fail... */
@@ -67,9 +68,8 @@ int main(int argc, char *argv[])
 	if(qm) {
 		ctxt->machines = g_slist_append(ctxt->machines, qm);
 		rack_attach(rack, qm, 10);
+		display_set_kvm_source(dpy, qmach_get_kvm_source(qm));
 	}
-
-	vnc_init(ctxt);
 
 	gui_run(ctxt);
 
