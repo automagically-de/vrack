@@ -126,7 +126,7 @@ VRackQMach *qmach_new(VRackCtxt *ctxt, const gchar *description)
 	/* wait for pid file (successful start) */
 	error = NULL;
 	name = g_strdup_printf("%s%c" PIDFILE, qm->tmpdir, G_DIR_SEPARATOR);
-	if(!misc_wait_for_file(name, 2000)) {
+	if(!misc_wait_for_file(name, 5000)) {
 		g_warning("qmach:  pid file '%s' not created", name);
 		g_free(name);
 		qmach_cleanup(qm);
@@ -135,7 +135,7 @@ VRackQMach *qmach_new(VRackCtxt *ctxt, const gchar *description)
 
 	/* open monitor socket */
 	name = g_strdup_printf("%s%c" MONSOCK, qm->tmpdir, G_DIR_SEPARATOR);
-	if(!misc_wait_for_file(name, 2000)) {
+	if(!misc_wait_for_file(name, 5000)) {
 		g_warning("qmach: could not find monitor socket '%s'", name);
 		g_free(name);
 		qmach_cleanup(qm);

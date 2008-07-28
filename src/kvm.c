@@ -13,6 +13,7 @@ struct _VRackKvmSwitch {
 	VRackKvmSource **input_sources;
 	GtkWidget *widget;
 	GtkWidget **w_ports;
+	GdkPixbuf *black_pixbuf;
 };
 
 static void kvm_create_widget(VRackKvmSwitch *kvm);
@@ -23,6 +24,7 @@ static gboolean kvm_get_size_cb(gpointer opaque, guint32 *w, guint32 *h);
 VRackKvmSwitch *kvm_switch_new(VRackCtxt *ctxt, guint32 n_ports)
 {
 	VRackKvmSwitch *kvm;
+	static guint8 black_pixel[4] = { 0x00, 0x00, 0x00, 0xFF };
 
 	kvm = g_new0(VRackKvmSwitch, 1);
 	kvm->selected_port = -1;
@@ -34,6 +36,11 @@ VRackKvmSwitch *kvm_switch_new(VRackCtxt *ctxt, guint32 n_ports)
 	kvm->input_sources = g_new0(VRackKvmSource *, n_ports);
 
 	kvm_create_widget(kvm);
+
+	kvm->black_pixbuf = gdk_pixbuf_new_from_data(black_pixel,
+		GDK_COLORSPACE_RGB, TRUE /* alpha */, 8 /* bpp */,
+		1 /* width */, 1 /* height */, 4 /* rowstride */,
+		NULL, NULL);
 
 	kvm->rackitem = rack_item_new(kvm->widget, 1);
 
@@ -119,11 +126,11 @@ static GdkPixbuf *kvm_get_pixbuf_cb(gpointer opaque)
 	VRackKvmSource *source;
 
 	if(kvm->selected_port == -1)
-		return NULL;
+		return gdk_pixbuf_copy(kvm->black_pixbuf);
 	source = kvm->input_sources[kvm->selected_port];
 	if(source)
 		return source->get_pixbuf(source->opaque);
-	return NULL;
+	return gdk_pixbuf_copy(kvm->black_pixbuf);
 }
 
 static gboolean kvm_get_size_cb(gpointer opaque, guint32 *w, guint32 *h)
@@ -131,11 +138,16 @@ static gboolean kvm_get_size_cb(gpointer opaque, guint32 *w, guint32 *h)
 	VRackKvmSwitch *kvm = opaque;
 	VRackKvmSource *source;
 
-	if(kvm->selected_port == -1)
-		return FALSE;
+	if(kvm->selected_port == -1) {
+		*w = 1;
+		*h = 1;
+		return TRUE;
+	}
 	source = kvm->input_sources[kvm->selected_port];
 	if(source)
 		return source->get_size(source->opaque, w, h);
-	return FALSE;
+	*w = 1;
+	*h = 1;
+	return TRUE;
 }
 
